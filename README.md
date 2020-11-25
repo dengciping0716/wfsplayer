@@ -1,6 +1,8 @@
 wfs.js - html5 player for raw h.264 streams. 
 ================
  
+基于 https://github.com/ChihChengYang/wfs.js.git 库的修改版本，解决黑屏和卡顿问题。使用video.js mux库中的 h264解码。
+
 A javascript library which implements websocket client for watching and focusing on raw h.264 live streams in your browser that works directly on top of a standard HTML5 element and MediaSource Extensions.
  
 It works by transmuxing H264 NAL unit into ISO BMFF (MP4) fragments.
@@ -45,3 +47,4 @@ yet that can be easily transfered and connected to RTSP or other sources (h.264 
 ##  Reference
 
 [hls.js](https://github.com/dailymotion/hls.js "hls.js")
+[mux.js](https://github.com/videojs/mux.js/)

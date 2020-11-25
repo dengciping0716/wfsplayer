@@ -27,6 +27,12 @@ module.exports = {
   WEBSOCKET_DATA_UPLOADING: 'wfsWebsocketDataUploading',
 
   WEBSOCKET_MESSAGE_SENDING: 'wfsWebsocketMessageSending',   
+
+  WEBSOCKET_DATA_SIZE: 'wfsWebsocketDataSize',   
+
+  WEBSOCKET_CONNECT:'wfsWebsocketConnect',
+
+  WEBSOCKET_RECEIVED_MSG:'wfsWebsocketMsg',
 //------------------------------------------
   FILE_HEAD_LOADING: 'wfsFileHeadLoading',
 

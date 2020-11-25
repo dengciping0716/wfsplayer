@@ -4,7 +4,7 @@
 
 import Event from '../events';
 import EventHandler from '../event-handler';
-import SlicesReader from '../utils/h264-nal-slicesreader.js';
+// import SlicesReader from '../utils/h264-nal-slicesreader.js';
 
 class WebsocketLoader extends EventHandler {
 
@@ -14,14 +14,14 @@ class WebsocketLoader extends EventHandler {
     Event.WEBSOCKET_DATA_UPLOADING,
     Event.WEBSOCKET_MESSAGE_SENDING)   
     this.buf = null;
-    this.slicesReader = new SlicesReader(wfs);
+    // this.slicesReader = new SlicesReader(wfs);
     this.mediaType = undefined; 
     this.channelName = undefined; 
   }
  
   destroy() { 
 	!!this.client && this.client.close();
-	this.slicesReader.destroy();
+	// this.slicesReader.destroy();
     EventHandler.prototype.destroy.call(this);
   }
 
@@ -38,23 +38,33 @@ class WebsocketLoader extends EventHandler {
   }
 
   initSocketClient(client){
-    this.client.binaryType = 'arraybuffer';
+    // this.client.binaryType = 'arraybuffer';
     this.client.onmessage = this.receiveSocketMessage.bind(this);
-    this.wfs.trigger(Event.WEBSOCKET_MESSAGE_SENDING, {commandType: "open", channelName:this.channelName, commandValue:"NA" });
+    this.wfs.trigger(Event.WEBSOCKET_CONNECT, {});
+    // this.wfs.trigger(Event.WEBSOCKET_MESSAGE_SENDING, {commandType: "open", channelName:this.channelName, commandValue:"NA" });
     console.log('Websocket Open!'); 
   }
  
   receiveSocketMessage( event ){
     if(document['hidden']) return;
-    this.buf = new Uint8Array(event.data);
-    var copy = new Uint8Array(this.buf);   
+    if((typeof event.data).toLowerCase() === 'string' ) {
+      console.log("Received data string");
+      this.wfs.trigger(Event.WEBSOCKET_RECEIVED_MSG, event.data);
+      return;
+    }
+    this.wfs.trigger(Event.WEBSOCKET_DATA_SIZE, event.data.size);
+
+    this.wfs.trigger(Event.H264_DATA_PARSING, event);
+
+    // this.buf = new Uint8Array(event.data);
+    // var copy = new Uint8Array(this.buf);   
     
-    if (this.mediaType ==='FMp4'){
-      this.wfs.trigger(Event.WEBSOCKET_ATTACHED, {payload: copy });
-    } 
-    if (this.mediaType === 'H264Raw'){
-      this.wfs.trigger(Event.H264_DATA_PARSING, {data: copy });
-    }   
+    // if (this.mediaType ==='FMp4'){
+    //   this.wfs.trigger(Event.WEBSOCKET_ATTACHED, {payload: copy });
+    // } 
+    // if (this.mediaType === 'H264Raw'){
+    //   this.wfs.trigger(Event.H264_DATA_PARSING, {data: copy });
+    // }   
   }
 
   onWebsocketDataUploading( event ){

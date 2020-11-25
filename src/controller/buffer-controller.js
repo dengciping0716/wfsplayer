@@ -4,14 +4,16 @@
 
 import Event from '../events';
 import EventHandler from '../event-handler';
- 
+import FlowTransmuxer from '../videojs/flow'
+
 class BufferController extends EventHandler {
 
   constructor(wfs) {
     super(wfs,
       Event.MEDIA_ATTACHING,
       Event.BUFFER_APPENDING,
-      Event.BUFFER_RESET
+      Event.BUFFER_RESET,
+      Event.H264_DATA_PARSING
     );
     
     this.mediaSource = null;
@@ -37,6 +39,7 @@ class BufferController extends EventHandler {
   }
 
   destroy() {
+    if(this.flow)this.flow.dispose();
     EventHandler.prototype.destroy.call(this);
   }
  
@@ -48,6 +51,9 @@ class BufferController extends EventHandler {
     if (media) {
       // setup the media source
       var ms = this.mediaSource = new MediaSource();
+      // link video and media Source
+      media.src = URL.createObjectURL(ms);
+
       //Media Source listeners
       this.onmso = this.onMediaSourceOpen.bind(this);
       this.onmse = this.onMediaSourceEnded.bind(this);
@@ -55,8 +61,6 @@ class BufferController extends EventHandler {
       ms.addEventListener('sourceopen', this.onmso);
       ms.addEventListener('sourceended', this.onmse);
       ms.addEventListener('sourceclose', this.onmsc);
-      // link video and media Source
-      media.src = URL.createObjectURL(ms);
     }
   }
 
@@ -105,100 +109,28 @@ class BufferController extends EventHandler {
       mediaSource.removeEventListener('sourceopen', this.onmso);
     }
 
-    if (this.mediaType === 'FMp4'){ 
-      this.checkPendingTracks();
-    }
+    let videoSourceBuffer = mediaSource.addSourceBuffer('video/mp4;codecs="avc1.42E01E"')
+    this.flow = new FlowTransmuxer();
+    this.flow.on('data' , function(segment){
+      if(segment.type == 'audio'){
+        // sudioSourceBuffer.appendBuffer(segment.data.buffer)
+      }else{
+        videoSourceBuffer.appendBuffer(segment.data.buffer)
+      }
+    })
 
     this.wfs.trigger(Event.MEDIA_ATTACHED, {media:this.media, channelName:this.channelName, mediaType: this.mediaType, websocketName:this.websocketName});
   }
 
-  checkPendingTracks() {  
-    this.createSourceBuffers({ tracks : 'video' , mimeType:'' } );
-    this.pendingTracks = {};  
-  }
-
-  onBufferReset(data) { 
-    if (this.mediaType === 'H264Raw'){ 
-      this.createSourceBuffers({ tracks : 'video' , mimeType: data.mimeType } );
-    }
-  }
- 
-  createSourceBuffers(tracks) {
-    var sourceBuffer = this.sourceBuffer,mediaSource = this.mediaSource;
-    let mimeType;
-    if (tracks.mimeType === ''){
-      mimeType = 'video/mp4;codecs=avc1.420028'; // avc1.42c01f avc1.42801e avc1.640028 avc1.420028
-    }else{
-      mimeType = 'video/mp4;codecs=' + tracks.mimeType;
-    }
- 
-    try {
-      let sb = sourceBuffer['video'] = mediaSource.addSourceBuffer(mimeType);
-      sb.addEventListener('updateend', this.onsbue);
-      tracks.buffer = sb;
-    } catch(err) {
-
-    }
-    this.wfs.trigger(Event.BUFFER_CREATED, { tracks : tracks } );
-    this.media.play();    
-  }
-
-  doAppending() {
-   
-    var wfs = this.wfs, sourceBuffer = this.sourceBuffer, segments = this.segments;
-    if (Object.keys(sourceBuffer).length) {
-       
-      if (this.media.error) {
-        this.segments = [];
-        console.log('trying to append although a media error occured, flush segment and abort');
-        return;
-      }
-      if (this.appending) { 
-        return;
-      }
-         
-      if (segments && segments.length) { 
-        var segment = segments.shift();
-        try {
-          if(sourceBuffer[segment.type]) { 
-            this.parent = segment.parent;
-            sourceBuffer[segment.type].appendBuffer(segment.data);
-            this.appendError = 0;
-            this.appended++;
-            this.appending = true;
-          } else {
-  
-          }
-        } catch(err) {
-          // in case any error occured while appending, put back segment in segments table 
-          segments.unshift(segment);
-          var event = {type: ErrorTypes.MEDIA_ERROR};
-          if(err.code !== 22) {
-            if (this.appendError) {
-              this.appendError++;
-            } else {
-              this.appendError = 1;
-            }
-            event.details = ErrorDetails.BUFFER_APPEND_ERROR;
-            event.frag = this.fragCurrent;   
-            if (this.appendError > wfs.config.appendErrorMaxRetry) { 
-              segments = [];
-              event.fatal = true;    
-              return;
-            } else {
-              event.fatal = false; 
-            }
-          } else { 
-            this.segments = [];
-            event.details = ErrorDetails.BUFFER_FULL_ERROR; 
-            return;
-          } 
-        }
-        
-      }
-    }
-  }
- 
+  onH264DataParsing(event) {
+		var b = event.data; // Blob: https://developer.mozilla.org/en-US/docs/Web/API/Blob
+    var reader = new FileReader();
+    reader.addEventListener('loadend', ()=>{
+        var bytes = new Uint8Array(reader.result);
+        this.flow.transmux(bytes);
+    });
+    reader.readAsArrayBuffer(b);
+	}
 }
 
 export default BufferController;

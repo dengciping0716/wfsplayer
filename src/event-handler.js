@@ -62,7 +62,7 @@ class EventHandler {
       eventToFunction.call(this, event, data).call();
     } catch (err) {
       console.log(`internal error happened while processing ${event}:${err.message}`);
-   //   this.hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event : event, err : err});
+      // this.hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event : event, err : err});
     }
   }
 }
