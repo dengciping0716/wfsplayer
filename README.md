@@ -12,7 +12,7 @@ Also,Implement a demo server to push video streams.
 ##  Build
 
 ```
-git clone https://github.com/ChihChengYang/wfs.js.git
+git clone https://github.com/dengciping0716/wfsplayer.git
 cd wfs.js
 ```
 
